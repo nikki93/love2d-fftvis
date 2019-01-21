@@ -53,14 +53,11 @@ end
 
 
 function love.draw()
-
     if UpdateSpectrum then
         for i = 1, #spectrum / 8 do --In case you want to show only a part of the list, you can use #spec/(amount of bars). Setting this to 1 will render all bars processed.
             love.graphics.rectangle("line", i * 7, ScreenSizeH, 7, -1 * (spectrum[i]:abs() * 0.7)) --iterate over the list, and draws a rectangle for each band value.
-            love.graphics.print("@ " .. math.floor((i) / length) .. "Hz " .. math.floor(spectrum[i]:abs() * 0.7), ScreenSizeW - 90, (12 * i)) --prints the frequency and it's current value on the screen.
-            love.graphics.print(CopyPos, 0, 0) --Current position being analyzed.
-            love.graphics.print(SoundData:getSampleCount(), 0, 20) --Current size of song in samples.
-            love.graphics.print(love.timer.getFPS(), 0, 40) --Current size of song in samples.
         end
     end
+
+    love.graphics.print('fps: ' .. love.timer.getFPS(), 2, 2) --Current size of song in samples.
 end
