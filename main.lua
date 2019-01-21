@@ -60,6 +60,7 @@ function love.draw()
             love.graphics.print("@ " .. math.floor((i) / length) .. "Hz " .. math.floor(spectrum[i]:abs() * 0.7), ScreenSizeW - 90, (12 * i)) --prints the frequency and it's current value on the screen.
             love.graphics.print(CopyPos, 0, 0) --Current position being analyzed.
             love.graphics.print(SoundData:getSampleCount(), 0, 20) --Current size of song in samples.
+            love.graphics.print(love.timer.getFPS(), 0, 40) --Current size of song in samples.
         end
     end
 end
