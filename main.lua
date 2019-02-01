@@ -1,63 +1,39 @@
-complex = require("https://raw.githubusercontent.com/h4rm/luafft/ad71ab4845a09b8ff5db9013f5183f36063b2bbe/src/complex.lua")
-fft = require("https://raw.githubusercontent.com/h4rm/luafft/ad71ab4845a09b8ff5db9013f5183f36063b2bbe/src/luafft.lua").fft
-abs = math.abs
-new = complex.new --required for using the FFT function.
-UpdateSpectrum = false
+local complex = require('https://raw.githubusercontent.com/h4rm/luafft/ad71ab4845a09b8ff5db9013f5183f36063b2bbe/src/complex.lua')
+local fft = require('https://raw.githubusercontent.com/h4rm/luafft/ad71ab4845a09b8ff5db9013f5183f36063b2bbe/src/luafft.lua').fft
 
-Song = "music1.mp3" --You have to put your songs somewhere along the main.lua file, so love2d can access it. Then, just point this string to the song you wish to use.
+local musicFilename = 'music1.mp3'
+local musicSoundData = love.sound.newSoundData(musicFilename)
+local musicSource = love.audio.newSource(musicFilename, 'stream')
+local musicSampleCount = musicSoundData:getSampleCount()
+musicSource:play()
 
-function devide(list, factor)
-    for i, v in ipairs(list) do list[i] = list[i] * factor end
-    -- This function multiplies every value in the list of frequencies for a given constant.Think of it as a sensibility setting.
-end
+local spectrum -- FFT of window from current position in song, as complex numbers
 
-
-function love.load()
-    SoundData = love.sound.newSoundData(Song) --You need to load the song both to obtain it's data AND play it.
-    Size = 1024 --The amount of frequencies to obtain as result of the FFT process.
-    Frequency = 44100 --The sampling rate of the song, in Hz
-    length = Size / Frequency -- The size of each frequency range of the final generated FFT values.
-
-    Music = love.audio.newSource(Song, 'stream')
-    Music:play()
-    Window = love.window.setMode(1024, 768, { resizable = true, vsync = true })
-end
-
+local NUM_FREQS = 1024
+local SAMPLE_RATE = 44100
 
 function love.update()
-    ScreenSizeW = love.graphics.getWidth() --gets screen dimensions.
-    ScreenSizeH = love.graphics.getHeight() --gets screen dimensions.
-
-
-    local MusicPos = Music:tell("samples") --Returns the current sample being played by the engine.
-    local MusicSize = SoundData:getSampleCount() --Obtain the size of the song in samples, so you can keep track of when it's gonna end.
-    if MusicPos >= MusicSize - 1536 then love.audio.rewind(Music) end --Rewinds the song when the music is almost over.
-
-    local List = {} --We'll fill this with sample information.
-
-    for i = MusicPos, MusicPos + (Size - 1) do
-        CopyPos = i
-        if i + 2048 > MusicSize then i = MusicSize / 2 end --Make sure you stop trying to copy stuff when the song is *almost* over, or you'll wind up getting access errors!
-
-        List[#List + 1] = new(SoundData:getSample(i * 2), 0) --Copies every sample to the list, which will be fed for the FFT calculation engine.
-        -- In this case, we're fetching the Right channel samples, hence the "i*2". For the left channel, use "i*2+1". If it's a mono music, use "i*2" and you should be good.
-        -- The "new" function used above is for generating complex numbers. The FFT function only works if given a table of complex values, and it returns a table of this kind.
+    local pos = musicSource:tell('samples')
+    if pos >= musicSampleCount - 1536 then -- About to end? Rewind.
+        love.audio.rewind(musicSource)
     end
 
-    spectrum = fft(List, false) --runs your list through the FFT analyzer. Returns a table of complex values, all properly processed for your usage.
-    --An FFT converts audio from a time space to a frequency space, so you can analyze the volume level in each one of it's frequency bands.
-
-    devide(spectrum, 10) --Multiply all obtained FFT freq infos by 10.
-    UpdateSpectrum = true --Tells the draw function it already has data to draw
+    local samples = {} -- Collect samples for window from `pos` as complex numbers
+    for i = pos, pos + (NUM_FREQS - 1) do
+        if i + 2048 > musicSampleCount then -- Don't spill over end
+            i = musicSampleCount / 2
+        end
+        samples[#samples + 1] = complex.new(musicSoundData:getSample(i * 2), 0)
+    end
+    spectrum = fft(samples, false) -- Compute FFT of samples
 end
 
-
 function love.draw()
-    if UpdateSpectrum then
-        for i = 1, #spectrum / 8 do --In case you want to show only a part of the list, you can use #spec/(amount of bars). Setting this to 1 will render all bars processed.
-            love.graphics.rectangle("line", i * 7, ScreenSizeH, 7, -1 * (spectrum[i]:abs() * 0.7)) --iterate over the list, and draws a rectangle for each band value.
+    if #spectrum > 0 then -- Draw FFT graph as a bunch of rectangles
+        local wh = love.graphics.getHeight()
+        for i = 1, #spectrum / 8 do
+            love.graphics.rectangle('line', i * 7, wh, 7, -7 * spectrum[i]:abs())
         end
     end
-
-    love.graphics.print('fps: ' .. love.timer.getFPS(), 2, 2) --Current size of song in samples.
+    love.graphics.print('fps: ' .. love.timer.getFPS(), 2, 2)
 end
